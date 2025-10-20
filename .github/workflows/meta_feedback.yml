@@ -14,7 +14,7 @@ permissions:
   checks: read
 
 concurrency:
-  group: "meta-feedback-${{ github.ref }}"
+  group: meta-feedback-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +24,7 @@ jobs:
 
     steps:
       - name: Guard: only teacher can trigger
+        shell: bash
         run: |
           ALLOWED_ACTORS="Ruixi1313"
           if ! echo "$ALLOWED_ACTORS" | tr ' ' '\n' | grep -q "^${GITHUB_ACTOR}$"; then
@@ -49,8 +50,8 @@ jobs:
       - name: Generate meta-feedback with GPT
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }} # optional (proxy/Azure)
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}           # e.g., gpt-4o-mini
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           python scripts/generate_feedback.py
 
@@ -58,6 +59,6 @@ jobs:
         run: |
           git config user.email "meta-feedback-bot@users.noreply.github.com"
           git config user.name "Meta-Feedback Bot"
-          git add Meta-Feedback_*.md .meta-feedback/state.json || true
+          git add "Meta-Feedback_"*.md .meta-feedback/state.json || true
           git commit -m "Teacher-triggered meta-feedback" || echo "No changes to commit"
           git push || true
