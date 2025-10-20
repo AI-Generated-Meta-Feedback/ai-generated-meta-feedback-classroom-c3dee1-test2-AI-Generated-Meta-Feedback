@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Guard: only teacher can trigger
+      - name: Guard - only teacher can trigger
         shell: bash
         run: |
           ALLOWED_ACTORS="Ruixi1313"
