@@ -1,10 +1,10 @@
-name: AI Generated Meta-Feedback (Teacher Trigger)
+name: AI Generated Meta-Feedback
 
 on:
   workflow_dispatch:
     inputs:
       reason:
-        description: "Reason for triggering (optional)"
+        description: "Selected"
         required: false
         default: "class-selected-run"
 
@@ -14,7 +14,7 @@ permissions:
   checks: read
 
 concurrency:
-  group: meta-feedback-${{ github.ref }}
+  group: "meta-feedback-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +24,6 @@ jobs:
 
     steps:
       - name: Guard - only teacher can trigger
-        shell: bash
         run: |
           ALLOWED_ACTORS="Ruixi1313"
           if ! echo "$ALLOWED_ACTORS" | tr ' ' '\n' | grep -q "^${GITHUB_ACTOR}$"; then
@@ -57,8 +56,39 @@ jobs:
 
       - name: Commit & push feedback
         run: |
+          echo "=== Configuring git ==="
           git config user.email "meta-feedback-bot@users.noreply.github.com"
           git config user.name "Meta-Feedback Bot"
-          git add "Meta-Feedback_"*.md .meta-feedback/state.json || true
-          git commit -m "Teacher-triggered meta-feedback" || echo "No changes to commit"
-          git push || true
+          
+          echo "=== Checking generated files ==="
+          ls -la Meta-Feedback_*.md 2>/dev/null || echo "No feedback files found"
+          ls -la .meta-feedback/state.json 2>/dev/null || echo "No state file found"
+          
+          echo "=== Adding files ==="
+          git add Meta-Feedback_*.md .meta-feedback/state.json || true
+          
+          echo "=== Checking for changes ==="
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          echo "=== Committing changes ==="
+          git commit -m "Teacher-triggered meta-feedback [skip ci]"
+          
+          echo "=== Fetching latest changes ==="
+          git fetch origin
+          
+          echo "=== Rebasing onto remote branch ==="
+          if git rebase origin/${{ github.ref_name }}; then
+            echo "Rebase successful"
+          else
+            echo "Rebase failed, switching to merge strategy"
+            git rebase --abort
+            git pull --no-rebase origin ${{ github.ref_name }}
+          fi
+          
+          echo "=== Pushing changes ==="
+          git push origin HEAD:${{ github.ref_name }}
+          
+          echo "Feedback successfully pushed to repository"
